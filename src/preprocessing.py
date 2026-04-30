@@ -41,6 +41,41 @@ class Preprocessor:
         )
         print(f" Target encoded: Yes=1, No=0")
         return self
+    def handle_missing_values(self):
+        """Handle missing values: median for numerical, mode for categorical."""
+        total = self.df.count()
+        print("\n Missing Value Report:")
+
+        for col_name, dtype in self.df.dtypes:
+            missing = self.df.filter(F.col(col_name).isNull()).count()
+            if missing > 0:
+                pct = round(missing / total * 100, 2)
+                print(f"   {col_name}: {missing} missing ({pct}%)")
+
+                if col_name in NUMERICAL_COLS:
+                    median_val = self.df.approxQuantile(col_name, [0.5], 0.01)[0]
+                    self.df = self.df.fillna({col_name: median_val})
+                    print(f"     → filled with median: {median_val}")
+                else:
+                    mode_val = (
+                        self.df.groupBy(col_name).count()
+                        .orderBy(F.desc("count"))
+                        .first()[0]
+                    )
+                    self.df = self.df.fillna({col_name: mode_val})
+                    print(f"     → filled with mode: {mode_val}")
+
+        print(" Missing values handled ")
+        return self
+
+    def show_summary(self):
+        """Print shape and basic stats after cleaning."""
+        print("\n Dataset Summary After Cleaning:")
+        print(f"   Rows    : {self.df.count()}")
+        print(f"   Columns : {len(self.df.columns)}")
+        print(f"   Columns : {self.df.columns}")
+        self.df.describe().show()
+        return self
 
     def encode_categoricals_dataframe(self):
         """Spark Paradigm 1: DataFrame API"""
@@ -154,12 +189,14 @@ class Preprocessor:
 
     def run(self):
         self.load_data()
+        self.handle_missing_values()
         self.drop_useless_columns()
         self.encode_target()
         self.encode_categoricals_dataframe()
         self.explore_with_sql()
         self.process_with_rdd()
         self.scale_numerical()
+        self.show_summary()
         self.save()
 
 
