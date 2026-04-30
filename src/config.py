@@ -1,6 +1,7 @@
 
 
 DATA_PATH = "/Volumes/workspace/default/project_clouddb/HR-Employee-Attrition.csv"
+
 # Target Columns
 
 TARGET_ATTRITION = "Attrition"
