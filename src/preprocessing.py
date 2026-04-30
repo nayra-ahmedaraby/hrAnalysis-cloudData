@@ -16,7 +16,6 @@ class Preprocessor:
             .appName("HR_Preprocessing") \
             .getOrCreate()
         self.df = None
-   
 
     def load_data(self):
         self.df = self.spark.read.csv(
@@ -28,19 +27,11 @@ class Preprocessor:
         return self
 
     def drop_useless_columns(self):
-   
         cols_to_remove = [c for c in COLS_TO_DROP if c in self.df.columns]
         self.df = self.df.drop(*cols_to_remove)
         print(f" Dropped columns: {cols_to_remove}")
         return self
 
-    def encode_target(self):
-        self.df = self.df.withColumn(
-            TARGET_ATTRITION,
-            F.when(F.col(TARGET_ATTRITION) == "Yes", 1).otherwise(0).cast(IntegerType())
-        )
-        print(f" Target encoded: Yes=1, No=0")
-        return self
     def handle_missing_values(self):
         """Handle missing values: median for numerical, mode for categorical."""
         total = self.df.count()
@@ -65,16 +56,15 @@ class Preprocessor:
                     self.df = self.df.fillna({col_name: mode_val})
                     print(f"     → filled with mode: {mode_val}")
 
-        print(" Missing values handled ")
+        print(" Missing values handled")
         return self
 
-    def show_summary(self):
-        """Print shape and basic stats after cleaning."""
-        print("\n Dataset Summary After Cleaning:")
-        print(f"   Rows    : {self.df.count()}")
-        print(f"   Columns : {len(self.df.columns)}")
-        print(f"   Columns : {self.df.columns}")
-        self.df.describe().show()
+    def encode_target(self):
+        self.df = self.df.withColumn(
+            TARGET_ATTRITION,
+            F.when(F.col(TARGET_ATTRITION) == "Yes", 1).otherwise(0).cast(IntegerType())
+        )
+        print(f" Target encoded: Yes=1, No=0")
         return self
 
     def encode_categoricals_dataframe(self):
@@ -93,10 +83,8 @@ class Preprocessor:
         pipeline = Pipeline(stages=indexers)
         self.df = pipeline.fit(self.df).transform(self.df)
 
-        # Drop original categorical columns
         self.df = self.df.drop(*[c for c in CATEGORICAL_COLS if c in self.df.columns])
 
-        # Rename indexed columns
         for col in CATEGORICAL_COLS:
             if f"{col}_idx" in self.df.columns:
                 self.df = self.df.withColumnRenamed(f"{col}_idx", col)
@@ -178,6 +166,18 @@ class Preprocessor:
         print(f" Numerical columns scaled ({len(num_cols)} columns)")
         return self
 
+    def show_summary(self):
+        """Print shape and basic stats after cleaning."""
+        display_cols = [c for c in self.df.columns
+                        if c not in ["features_vec", "scaled_features"]]
+
+        print("\n Dataset Summary After Cleaning:")
+        print(f"   Rows    : {self.df.count()}")
+        print(f"   Columns : {len(display_cols)}")
+        print(f"   Columns : {display_cols}")
+        self.df.select(display_cols).describe().show()
+        return self
+
     def save(self, output_path="/Volumes/workspace/default/project_clouddb/employees_clean.csv"):
         """Save cleaned DataFrame as CSV."""
         self.df.select(
@@ -189,8 +189,8 @@ class Preprocessor:
 
     def run(self):
         self.load_data()
-        self.handle_missing_values()
         self.drop_useless_columns()
+        self.handle_missing_values()
         self.encode_target()
         self.encode_categoricals_dataframe()
         self.explore_with_sql()
