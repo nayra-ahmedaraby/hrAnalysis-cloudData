@@ -1,0 +1,2 @@
+# Project dependencies for data processing, ML models, and visualization
+# Install with: pip install -r requirements.txt
