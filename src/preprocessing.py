@@ -3,7 +3,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, StandardScaler, VectorAssembler
 from pyspark.ml import Pipeline
-from config import (
+from src.config import (
     DATA_PATH, COLS_TO_DROP, CATEGORICAL_COLS,
     NUMERICAL_COLS, TARGET_ATTRITION
 )

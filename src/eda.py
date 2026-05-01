@@ -7,6 +7,7 @@ import seaborn as sns
 import os
 import pandas as pd
 import scipy.stats as stats
+from src.config import PROCESSED_DATA_PATH, FIGURES_PATH, REPORTS_PATH
 
 
 class EDAAnalyzer:
@@ -15,19 +16,19 @@ class EDAAnalyzer:
         self.spark = SparkSession.builder.appName("HR_EDA").getOrCreate()
 
         self.df = self.spark.read.csv(
-            "employees_clean.csv",
+            PROCESSED_DATA_PATH,
             header=True,
             inferSchema=True
         )
 
         self.df_feat = self.spark.read.csv(
-            "employees_features.csv",
+            PROCESSED_DATA_PATH,
             header=True,
             inferSchema=True
         )
 
-        os.makedirs("outputs/figures", exist_ok=True)
-        os.makedirs("outputs/reports", exist_ok=True)
+        os.makedirs(FIGURES_PATH, exist_ok=True)
+        os.makedirs(REPORTS_PATH, exist_ok=True)
 
     
 
@@ -42,7 +43,7 @@ class EDAAnalyzer:
         plt.figure()
         sns.barplot(data=pdf, x="Attrition", y="count")
         plt.title("Attrition Distribution")
-        plt.savefig("outputs/figures/attrition_dist.png")
+        plt.savefig(f"{FIGURES_PATH}/attrition_dist.png")
 
         # Salary distribution
         salary = self.df.select("MonthlyIncome").toPandas()
@@ -50,7 +51,7 @@ class EDAAnalyzer:
         plt.figure()
         sns.histplot(salary["MonthlyIncome"], kde=True)
         plt.title("Salary Distribution")
-        plt.savefig("outputs/figures/salary_dist.png")
+        plt.savefig(f"{FIGURES_PATH}/salary_dist.png")
 
         return self
 
@@ -64,7 +65,7 @@ class EDAAnalyzer:
         plt.figure()
         sns.boxplot(data=pdf, x="Attrition", y="MonthlyIncome")
         plt.title("Salary vs Attrition")
-        plt.savefig("outputs/figures/salary_vs_attrition.png")
+        plt.savefig(f"{FIGURES_PATH}/salary_vs_attrition.png")
 
         dept = self.df.groupBy("Department", "Attrition").count().toPandas()
 
@@ -72,7 +73,7 @@ class EDAAnalyzer:
         sns.barplot(data=dept, x="Department", y="count", hue="Attrition")
         plt.xticks(rotation=45)
         plt.title("Department vs Attrition")
-        plt.savefig("outputs/figures/department_attrition.png")
+        plt.savefig(f"{FIGURES_PATH}/department_attrition.png")
 
         return self
 
@@ -86,7 +87,7 @@ class EDAAnalyzer:
         plt.figure(figsize=(10,6))
         sns.heatmap(pdf.corr(numeric_only=True), cmap="coolwarm")
         plt.title("Correlation Heatmap")
-        plt.savefig("outputs/figures/correlation_heatmap.png")
+        plt.savefig(f"{FIGURES_PATH}/correlation_heatmap.png")
 
         return self
 

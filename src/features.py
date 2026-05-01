@@ -1,10 +1,10 @@
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from config import TARGET_ATTRITION
+from src.config import TARGET_ATTRITION, PROCESSED_DATA_PATH, FIGURES_PATH
 
-CLEAN_PATH    = "/Volumes/workspace/default/project_clouddb/employees_clean.csv"
-FEATURES_PATH = "/Volumes/workspace/default/project_clouddb/employees_features.csv"
+CLEAN_PATH    = PROCESSED_DATA_PATH
+FEATURES_PATH = PROCESSED_DATA_PATH
 
 
 class FeatureEngineer:

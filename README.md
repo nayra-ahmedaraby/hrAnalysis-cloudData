@@ -12,7 +12,7 @@ this is the tree of the project:
 │
 ├── data/
 │   ├── raw/
-│   │   └── hr_data.csv
+│   │   └── WA_Fn-UseC_-HR-Employee-Attrition.csv
 │   └── processed/                   # output preprocessed data 
 │
 ├── src/

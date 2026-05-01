@@ -1,6 +1,14 @@
 
 
-DATA_PATH = "/Volumes/workspace/default/project_clouddb/HR-Employee-Attrition.csv"
+DATA_PATH = "/Volumes/workspace/default/project/data/raw/WA_Fn-UseC_-HR-Employee-Attrition.csv"
+
+PROCESSED_DATA_PATH = "/Volumes/workspace/default/project/data/processed/hr_processed.csv"
+FIGURES_PATH = "/Volumes/workspace/default/project/figures"
+REPORTS_PATH = "/Volumes/workspace/default/project/reports"
+MODELS_PATH = "/Volumes/workspace/default/project/models"
+ATTRITION_MODEL_PATH = f"{MODELS_PATH}/attrition_model.pkl"
+PERFORMANCE_MODEL_PATH = f"{MODELS_PATH}/performance_model.pkl"
+CLUSTERING_MODEL_PATH = f"{MODELS_PATH}/clustering_model.pkl"
 
 # Target Columns
 
