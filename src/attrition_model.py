@@ -3,7 +3,7 @@
 # Models: Logistic Regression, Random Forest, Gradient Boosting
 # Output: Evaluation metrics, Top 10 features, Risk scores
 
-from src.config import PROCESSED_DATA_PATH
+from src.config import PROCESSED_DATA_PATH, REPORTS_PATH, MODELS_PATH
 
 # =========================
 # 1. Load processed data
@@ -124,13 +124,13 @@ pdf["risk_score"] = best_model.predict_proba(X)[:, 1]
 # =========================
 # 9. Save outputs (executed by owner)
 # =========================
-pdf[["risk_score"]].to_csv(
-    "risk_scores.csv",
+pdf["risk_score"].to_csv(
+    f"{REPORTS_PATH}/risk_scores.csv",
     index=False
 )
 
 top_features.to_csv(
-    "top_10_features.csv"
+    f"{REPORTS_PATH}/top_10_features.csv"
 )
 
 print("\n✅ Attrition model completed.")

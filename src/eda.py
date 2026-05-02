@@ -113,7 +113,7 @@ Top Insights:
 5. Work-life balance strongly impacts retention.
 """
 
-        with open("outputs/reports/eda_findings.md", "w") as f:
+        with open(f"{REPORTS_PATH}/eda_findings.md", "w") as f:
             f.write(insight_text)
 
         return self
@@ -144,7 +144,7 @@ Chi-Square:
 p-value = {chi_p}
 """
 
-        with open("outputs/reports/p_values_table.txt", "w") as f:
+        with open(f"{REPORTS_PATH}/p_values_table.txt", "w") as f:
           f.write(result)
 
         return self
