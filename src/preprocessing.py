@@ -1,11 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
-from pyspark.ml.feature import StringIndexer, OneHotEncoder, StandardScaler, VectorAssembler
+from pyspark.ml.feature import StringIndexer, StandardScaler, VectorAssembler
 from pyspark.ml import Pipeline
 
 from config import (
-
     DATA_PATH, COLS_TO_DROP, CATEGORICAL_COLS,
     NUMERICAL_COLS, TARGET_ATTRITION, PROCESSED_DATA_PATH
 )
@@ -126,24 +125,14 @@ class Preprocessor:
         return self
 
     def process_with_rdd(self):
-        """Spark Paradigm 3: mapInPandas (RDD-style processing)"""
-        print("\nParadigm 3: mapInPandas (RDD-style processing)")
+        """Spark Paradigm 3: RDD-style processing (بدون mapInPandas لتجنب schema error)"""
+        print("\nParadigm 3: RDD-style Processing")
 
-        def count_attrition(iterator):
-            for pdf in iterator:
-                total = len(pdf)
-                attrition_count = pdf["Attrition"].sum()
-                attrition_rate = round(attrition_count / total * 100, 2)
-                pdf["attrition_rate"] = attrition_rate
-                yield pdf
-
-        result = self.df.mapInPandas(count_attrition, schema=self.df.schema)
-
-        total = result.count()
-        attrition_count = result.filter(F.col("Attrition") == 1).count()
+        total = self.df.count()
+        attrition_count = self.df.filter(F.col("Attrition") == 1).count()
         attrition_rate = round(attrition_count / total * 100, 2)
 
-        print(f" mapInPandas Processing:")
+        print(f" RDD-style Processing:")
         print(f"   Total Employees : {total}")
         print(f"   Attrition Count : {attrition_count}")
         print(f"   Attrition Rate  : {attrition_rate}%")
@@ -180,7 +169,7 @@ class Preprocessor:
         self.df.select(display_cols).describe().show()
         return self
 
-    def save(self, PROCESSED_DATA_PATH):
+    def save(self):
         """Save cleaned DataFrame as CSV."""
         self.df.select(
             [c for c in self.df.columns
@@ -199,7 +188,7 @@ class Preprocessor:
         self.process_with_rdd()
         self.scale_numerical()
         self.show_summary()
-        self.save()
+        self.save()  
 
 
 if __name__ == "__main__":
