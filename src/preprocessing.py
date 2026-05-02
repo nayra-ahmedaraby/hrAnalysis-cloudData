@@ -3,9 +3,11 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, StandardScaler, VectorAssembler
 from pyspark.ml import Pipeline
-from src.config import (
+
+from config import (
+
     DATA_PATH, COLS_TO_DROP, CATEGORICAL_COLS,
-    NUMERICAL_COLS, TARGET_ATTRITION
+    NUMERICAL_COLS, TARGET_ATTRITION, PROCESSED_DATA_PATH
 )
 
 
@@ -178,13 +180,13 @@ class Preprocessor:
         self.df.select(display_cols).describe().show()
         return self
 
-    def save(self, output_path="/Volumes/workspace/default/project_clouddb/employees_clean.csv"):
+    def save(self, PROCESSED_DATA_PATH):
         """Save cleaned DataFrame as CSV."""
         self.df.select(
             [c for c in self.df.columns
              if c not in ["features_vec", "scaled_features"]]
-        ).write.csv(output_path, header=True, mode="overwrite")
-        print(f"\n Saved → {output_path}")
+        ).write.csv(PROCESSED_DATA_PATH, header=True, mode="overwrite")
+        print(f"\n Saved → {PROCESSED_DATA_PATH}")
         return self
 
     def run(self):
