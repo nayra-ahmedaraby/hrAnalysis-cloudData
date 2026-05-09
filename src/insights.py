@@ -262,6 +262,36 @@ class InsightsGenerator:
                     if c in df.columns]
             df[cols].to_csv(f"{DASHBOARD_PATH}/employees_risk.csv", index=False)
 
+        # ---- SINGLE FACT TABLE for Power BI (recommended) ----
+        # One fat row per employee — Power BI handles all aggregations natively,
+        # slicers filter everything, no DAX needed.
+        full_cols = [c for c in [
+            ID_COL,
+            # Categorical (decoded)
+            "Department", "JobRole", "Gender", "MaritalStatus",
+            "BusinessTravel", "EducationField", "OverTime",
+            # Numeric — demographics
+            "Age", "Education", "DistanceFromHome",
+            # Numeric — job
+            "JobLevel", "MonthlyIncome", "PercentSalaryHike",
+            "StockOptionLevel", "TrainingTimesLastYear",
+            # Satisfaction scores
+            "JobSatisfaction", "EnvironmentSatisfaction", "JobInvolvement",
+            "WorkLifeBalance", "RelationshipSatisfaction", "PerformanceRating",
+            # Tenure
+            "TotalWorkingYears", "YearsAtCompany", "YearsInCurrentRole",
+            "YearsSinceLastPromotion", "YearsWithCurrManager",
+            "NumCompaniesWorked",
+            # Engineered
+            "EngagementScore", "TenureRatio", "PromotionVelocity",
+            "IncomeDeviation", "LoyaltyIndex",
+            # Targets / model output
+            TARGET_ATTRITION, "risk_score", "risk_band",
+            "Cluster", "PerfScore",
+        ] if c in df.columns]
+
+        df[full_cols].to_csv(f"{DASHBOARD_PATH}/employees_full.csv", index=False)
+
         # Department drill-down — reuse the dept recs table
         if self.dept_recs is not None:
             self.dept_recs.to_csv(f"{DASHBOARD_PATH}/department_drilldown.csv", index=False)
