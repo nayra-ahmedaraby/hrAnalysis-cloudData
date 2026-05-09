@@ -121,9 +121,6 @@ class FeatureEngineer:
         return self
 
     def run(self):
-        print("=" * 50)
-        print("  Member 1 — Part 2: Feature Engineering")
-        print("=" * 50)
         self.load_data()
         self.build_engagement_score()
         self.build_tenure_ratio()

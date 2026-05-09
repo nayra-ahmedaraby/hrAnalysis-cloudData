@@ -1,9 +1,3 @@
-# Member 4 (Part 1) — Performance Prediction
-# - Composite Performance Score (PerfScore)
-# - Regression on PerfScore (Linear / RF / GBT) → RMSE
-# - Classification on PerformanceRating (LR / RF / GBT) → F1
-# - Performance drivers (top features)
-
 import os
 import joblib
 import numpy as np

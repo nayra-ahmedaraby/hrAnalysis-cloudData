@@ -1,5 +1,3 @@
-# Member 2 — Exploratory Data Analysis
-# Univariate / Bivariate / Multivariate plots, statistical tests, top-10 insights, Spark SQL queries.
 
 import os
 import pandas as pd

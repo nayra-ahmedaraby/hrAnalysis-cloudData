@@ -1,7 +1,3 @@
-# Member 3 — Attrition Prediction
-# Compares 3 classifiers (LR / RF / GBT), uses class_weight for imbalance,
-# evaluates F1 / Precision / Recall / ROC-AUC, saves the best model and risk_scores.csv.
-
 import os
 import joblib
 import numpy as np

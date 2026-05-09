@@ -1,18 +1,3 @@
-# Member 5 — Insights & Strategic Recommendations
-#
-# Reads:  employees_with_clusters.csv, risk_scores.csv, personas.csv, top_10_features.csv
-# Writes:
-#   reports/recommendations.md
-#   reports/top20_high_risk.csv
-#   reports/persona_strategies.csv
-#   reports/department_recommendations.csv
-#   reports/executive_summary.json
-#   dashboard/executive_summary.csv
-#   dashboard/risk_heatmap.csv
-#   dashboard/department_drilldown.csv
-#   dashboard/personas.csv
-#   dashboard/employees_risk.csv
-
 import os
 import json
 import pandas as pd
@@ -306,4 +291,7 @@ class InsightsGenerator:
 
 
 if __name__ == "__main__":
+    %pip install tabulate
+    dbutils.library.restartPython()
+
     InsightsGenerator().run()
