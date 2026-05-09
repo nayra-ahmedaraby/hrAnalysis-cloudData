@@ -47,7 +47,7 @@ class Preprocessor:
                 if col_name in NUMERICAL_COLS:
                     median_val = self.df.approxQuantile(col_name, [0.5], 0.01)[0]
                     self.df = self.df.fillna({col_name: median_val})
-                    print(f"     → filled with median: {median_val}")
+                    print(f"     filled with median: {median_val}")
                 else:
                     mode_val = (
                         self.df.groupBy(col_name).count()
@@ -55,7 +55,7 @@ class Preprocessor:
                         .first()[0]
                     )
                     self.df = self.df.fillna({col_name: mode_val})
-                    print(f"     → filled with mode: {mode_val}")
+                    print(f"      filled with mode: {mode_val}")
 
         print(" Missing values handled")
         return self
@@ -175,7 +175,7 @@ class Preprocessor:
             [c for c in self.df.columns
              if c not in ["features_vec", "scaled_features"]]
         ).write.csv(PROCESSED_DATA_PATH, header=True, mode="overwrite")
-        print(f"\n Saved → {PROCESSED_DATA_PATH}")
+        print(f"\n Saved  {PROCESSED_DATA_PATH}")
         return self
 
     def run(self):
