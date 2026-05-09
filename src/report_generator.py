@@ -130,7 +130,7 @@ class ReportGenerator:
         ]))
         return t
 
-    def _image(self, name, width=14 * cm):
+    def _image(self, name, width=11 * cm):
         path = f"{FIGURES_PATH}/{name}"
         if os.path.exists(path):
             return Image(path, width=width, height=width * 0.6, kind="proportional")
@@ -278,6 +278,27 @@ class ReportGenerator:
 
     def _eda(self):
         story = [PageBreak(), Paragraph("3. EDA Highlights", self.styles["H1"])]
+
+        # 3.1 Top 10 insights (qualitative findings from the data)
+        story.append(Paragraph("3.1 Top 10 insights", self.styles["H2"]))
+        insights = [
+            "Overall attrition rate is around 16% — moderately high vs the typical 10% benchmark.",
+            "OverTime is the strongest single driver — overtime employees leave roughly 3x more often.",
+            "Sales has the highest department attrition rate, followed by R&amp;D and HR.",
+            "Younger employees (under 30) leave more often than older cohorts.",
+            "Lower MonthlyIncome correlates with higher attrition risk.",
+            "Low JobSatisfaction strongly predicts leaving.",
+            "WorkLifeBalance score of 1 has noticeably higher attrition than scores 2–4.",
+            "Frequent business travelers leave more often than rare or non-travelers.",
+            "Single employees show higher attrition than Married or Divorced.",
+            "Long gaps since last promotion (more than 5 years) raise attrition risk.",
+        ]
+        for i, ins in enumerate(insights, 1):
+            story.append(Paragraph(f"{i}. {ins}", self.styles["Body2"]))
+        story.append(Spacer(1, 0.4 * cm))
+
+        # 3.2 Visual highlights
+        story.append(Paragraph("3.2 Visual highlights", self.styles["H2"]))
         for name, caption in [
             ("attrition_distribution.png",
              "Attrition is imbalanced — about 16% of employees leave."),
@@ -343,13 +364,38 @@ class ReportGenerator:
         personas = self._read_csv("personas.csv")
         if not personas.empty:
             personas = self._round_numeric(personas, 3)
+
             # Reorder so Persona is right after Cluster if present
             cols = personas.columns.tolist()
             if "Persona" in cols:
                 ordered = ["Cluster", "Persona"] + [c for c in cols
                                                     if c not in ("Cluster", "Persona")]
                 personas = personas[[c for c in ordered if c in cols]]
-            story.append(self._table(personas))
+
+            # Shorten long numeric column names so the table fits the page
+            rename_map = {
+                "EngagementScore":   "Engage",
+                "TenureRatio":       "Tenure",
+                "PromotionVelocity": "PromoVel",
+                "IncomeDeviation":   "IncDev",
+                "LoyaltyIndex":      "Loyalty",
+                "risk_score":        "Risk",
+            }
+            personas = personas.rename(columns=rename_map)
+
+            # Explicit widths so headers and Persona text don't wrap mid-word
+            widths = []
+            for c in personas.columns:
+                if c == "Cluster":
+                    widths.append(1.4 * cm)
+                elif c == "Persona":
+                    widths.append(4.2 * cm)
+                else:
+                    widths.append(1.7 * cm)
+
+            story.append(self._table(
+                personas, col_widths=widths, wrap_cols=["Persona"],
+            ))
             story.append(Spacer(1, 0.4 * cm))
             story.append(Paragraph(
                 "Each cluster represents a distinct workforce profile. The "

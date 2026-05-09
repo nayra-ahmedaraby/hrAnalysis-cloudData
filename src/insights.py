@@ -254,6 +254,10 @@ class InsightsGenerator:
             "high_risk_count": int((df.get("risk_score", pd.Series([])) > 0.6).sum()),
             "avg_monthly_income": round(float(df["MonthlyIncome"].mean()), 2)
                                   if "MonthlyIncome" in df.columns else None,
+            "avg_age": round(float(df["Age"].mean()), 1)
+                       if "Age" in df.columns else None,
+            "avg_tenure_years": round(float(df["YearsAtCompany"].mean()), 1)
+                                if "YearsAtCompany" in df.columns else None,
         }
         pd.DataFrame([kpis]).to_csv(f"{DASHBOARD_PATH}/executive_summary.csv", index=False)
         self.summary = kpis

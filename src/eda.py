@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
 
 from src.config import PROCESSED_DATA_PATH, FIGURES_PATH, REPORTS_PATH
 
@@ -108,34 +107,7 @@ class EDAAnalyzer:
 
         return self
 
-    # --- 4. Top-10 insights -------------------------------------------
-    def insights(self):
-        print("[EDA] Insights")
-
-        total = self.df.count()
-        attrition = self.df.filter(F.col("Attrition") == 1).count()
-        rate = round(attrition / total * 100, 2)
-
-        text = f"""# EDA Findings — Top 10 Insights
-
-**Dataset:** {total} employees | **Attrition rate:** {rate}%
-
-1. Overall attrition rate is {rate}% — moderately high.
-2. OverTime is the strongest single driver — overtime employees leave roughly 3x more.
-3. Sales has the highest department attrition rate, followed by R&D and HR.
-4. Younger employees (<30) leave more often.
-5. Lower MonthlyIncome correlates with higher attrition.
-6. Low JobSatisfaction strongly predicts leaving.
-7. WorkLifeBalance score of 1 has noticeably higher attrition.
-8. Frequent business travelers leave more often.
-9. Single employees show higher attrition than Married / Divorced.
-10. Long gaps since last promotion (>5y) raise attrition risk.
-"""
-        with open(f"{REPORTS_PATH}/eda_findings.md", "w", encoding="utf-8") as f:
-            f.write(text)
-        return self
-
-    # --- 5. Statistical tests -----------------------------------------
+    # --- 4. Statistical tests -----------------------------------------
     def statistical_tests(self):
         print("[EDA] Statistical tests")
 
@@ -168,7 +140,7 @@ class EDAAnalyzer:
             f.write(df_res.to_markdown(index=False))
         return self
 
-    # --- 6. Spark SQL --------------------------------------------------
+    # --- 5. Spark SQL --------------------------------------------------
     def sql_analysis(self):
         print("[EDA] Spark SQL")
         self.df.createOrReplaceTempView("employees")
@@ -194,7 +166,6 @@ class EDAAnalyzer:
             .univariate_analysis()
             .bivariate_analysis()
             .multivariate_analysis()
-            .insights()
             .statistical_tests()
             .sql_analysis())
         print("[EDA] Done.")
