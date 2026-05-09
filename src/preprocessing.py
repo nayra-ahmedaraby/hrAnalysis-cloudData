@@ -47,7 +47,7 @@ class Preprocessor:
                 if col_name in NUMERICAL_COLS:
                     median_val = self.df.approxQuantile(col_name, [0.5], 0.01)[0]
                     self.df = self.df.fillna({col_name: median_val})
-                    print(f"     → filled with median: {median_val}")
+                    print(f"     filled with median: {median_val}")
                 else:
                     mode_val = (
                         self.df.groupBy(col_name).count()
