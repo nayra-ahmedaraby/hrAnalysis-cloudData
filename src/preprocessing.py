@@ -175,7 +175,7 @@ class Preprocessor:
             [c for c in self.df.columns
              if c not in ["features_vec", "scaled_features"]]
         ).write.csv(PROCESSED_DATA_PATH, header=True, mode="overwrite")
-        print(f"\n Saved → {PROCESSED_DATA_PATH}")
+        print(f"\n Saved  {PROCESSED_DATA_PATH}")
         return self
 
     def run(self):
