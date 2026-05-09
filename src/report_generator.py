@@ -244,7 +244,7 @@ class ReportGenerator:
         ]
 
     def _kpi_grid(self, summary):
-        """Render KPIs as a 2-row x 4-col grid of large-value cards."""
+        """Render KPIs as a 2-row x 4-col grid of large-value cards (8 cells)."""
         order = [
             ("total_employees",     "Total Employees",   "{}"),
             ("attrition_rate",      "Attrition Rate",    "{}%"),
@@ -261,17 +261,18 @@ class ReportGenerator:
                 continue
             cards.append((label, fmt.format(v)))
 
+        # 8th card — Best Model highlight (always render as the closing card)
+        cards.append(("Best Model", "GBT"))
+
         if not cards:
             return None
 
-        # arrange 4 per row
-        rows = []
         per_row = 4
+        rows = []
         for i in range(0, len(cards), per_row):
             chunk = cards[i:i + per_row]
             label_row = [Paragraph(lbl, self.styles["KpiLabel"]) for lbl, _ in chunk]
             value_row = [Paragraph(val, self.styles["KpiValue"]) for _, val in chunk]
-            # pad to per_row
             while len(label_row) < per_row:
                 label_row.append("")
                 value_row.append("")
@@ -280,7 +281,6 @@ class ReportGenerator:
 
         col_widths = [(17 / per_row) * cm] * per_row
         t = Table(rows, colWidths=col_widths)
-        # alternate row backgrounds: value rows = LIGHT, label rows = white
         styles = [
             ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
             ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")),
@@ -288,9 +288,29 @@ class ReportGenerator:
             ("TOPPADDING", (0, 0), (-1, -1), 8),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]
-        # Highlight value rows
+        # alternate value-row backgrounds
         for r_idx in range(0, len(rows), 2):
             styles.append(("BACKGROUND", (0, r_idx), (-1, r_idx), LIGHT))
+        # Highlight the Best Model card (last cell, last 2 rows) with accent
+        last_row_idx_value = len(rows) - 2
+        last_row_idx_label = len(rows) - 1
+        styles.append(("BACKGROUND", (per_row - 1, last_row_idx_value),
+                       (per_row - 1, last_row_idx_label), NAVY))
+        t.setStyle(TableStyle(styles))
+
+        # Re-style the Best Model cell text to white
+        # (do this by overriding the paragraphs already in the table)
+        # The two cells we need are at (per_row-1, last_row_idx_value) and (..., last_row_idx_label).
+        white_value = ParagraphStyle(
+            name="kw1", parent=self.styles["KpiValue"], textColor=colors.whitesmoke,
+        )
+        white_label = ParagraphStyle(
+            name="kw2", parent=self.styles["KpiLabel"], textColor=colors.whitesmoke,
+        )
+        rows[last_row_idx_value][per_row - 1] = Paragraph("GBT", white_value)
+        rows[last_row_idx_label][per_row - 1] = Paragraph("Best Model", white_label)
+        # Rebuild the table with the updated cells
+        t = Table(rows, colWidths=col_widths)
         t.setStyle(TableStyle(styles))
         return t
 
@@ -325,7 +345,7 @@ class ReportGenerator:
         ]
         for b in bullets:
             story.append(Paragraph(
-                f'<font color="#e07a5f">▸</font>&nbsp;&nbsp;{b}',
+                f'<font color="#e07a5f"><b>•</b></font>&nbsp;&nbsp;{b}',
                 self.styles["Body2"],
             ))
 
@@ -479,6 +499,67 @@ class ReportGenerator:
 
         return story
 
+    def _persona_cards(self, personas):
+        """3 horizontal colored cards summarising each persona."""
+        # Map persona name → (header bg color, accent description)
+        color_map = {
+            "high attrition risk":      (RED,    "Critical priority"),
+            "loyal long-term employees": (GREEN, "Medium priority"),
+            "highly engaged":            (NAVY2, "High priority"),
+            "average workforce":         (colors.HexColor("#7f8c8d"), "Standard priority"),
+        }
+
+        # Build one mini-table per persona, then put them side-by-side
+        cards_row = []
+        for _, row in personas.iterrows():
+            persona_name = str(row.get("Persona", "Cluster"))
+            key = persona_name.lower()
+            color = next((c for k, (c, _) in color_map.items() if k in key), NAVY)
+            priority = next((p for k, (_, p) in color_map.items() if k in key), "—")
+
+            cluster_id = row.get("Cluster", "")
+            # Pull a few headline numbers
+            risk_v = row.get("risk_score", row.get("Risk", "—"))
+            engage_v = row.get("EngagementScore", row.get("Engage", "—"))
+            loyalty_v = row.get("LoyaltyIndex", row.get("Loyalty", "—"))
+
+            inner_data = [
+                [Paragraph(f'<font color="white"><b>Cluster {cluster_id}</b></font>',
+                           self.styles["Body2"])],
+                [Paragraph(f'<font color="white"><b>{persona_name}</b></font>',
+                           self.styles["Body2"])],
+                [Paragraph(f'<font color="white" size=8>{priority}</font>',
+                           self.styles["Body2"])],
+                [""],  # spacer
+                [Paragraph(f"<b>Risk:</b> {risk_v}", self.styles["Body2"])],
+                [Paragraph(f"<b>Engage:</b> {engage_v}", self.styles["Body2"])],
+                [Paragraph(f"<b>Loyalty:</b> {loyalty_v}", self.styles["Body2"])],
+            ]
+            inner = Table(inner_data, colWidths=[5.2 * cm])
+            inner.setStyle(TableStyle([
+                # colored header band (first 3 rows)
+                ("BACKGROUND",   (0, 0), (-1, 2), color),
+                ("TEXTCOLOR",    (0, 0), (-1, 2), colors.whitesmoke),
+                ("LEFTPADDING",  (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING",   (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+                ("LINEABOVE",    (0, 4), (-1, 4), 0.5, colors.HexColor("#dddddd")),
+                ("BOX",          (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb")),
+            ]))
+            cards_row.append(inner)
+
+        # Place all cards side-by-side in a single 1-row table
+        if not cards_row:
+            return None
+        wrap = Table([cards_row], colWidths=[5.4 * cm] * len(cards_row))
+        wrap.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        return wrap
+
     def _segmentation(self):
         story = [
             PageBreak(),
@@ -494,6 +575,13 @@ class ReportGenerator:
                                                     if c not in ("Cluster", "Persona")]
                 personas = personas[[c for c in ordered if c in cols]]
 
+            # Visual persona cards (3 colored boxes)
+            cards = self._persona_cards(personas)
+            if cards is not None:
+                story.append(cards)
+                story.append(Spacer(1, 0.5 * cm))
+
+            # Detailed table — same as before, with shortened numeric headers
             rename_map = {
                 "EngagementScore":   "Engage",
                 "TenureRatio":       "Tenure",
@@ -502,10 +590,10 @@ class ReportGenerator:
                 "LoyaltyIndex":      "Loyalty",
                 "risk_score":        "Risk",
             }
-            personas = personas.rename(columns=rename_map)
+            personas_disp = personas.rename(columns=rename_map)
 
             widths = []
-            for c in personas.columns:
+            for c in personas_disp.columns:
                 if c == "Cluster":
                     widths.append(1.4 * cm)
                 elif c == "Persona":
@@ -513,8 +601,10 @@ class ReportGenerator:
                 else:
                     widths.append(1.7 * cm)
 
+            story.append(Paragraph("Detailed cluster profile",
+                                   self.styles["H2"]))
             story.append(self._table(
-                personas, col_widths=widths, wrap_cols=["Persona"],
+                personas_disp, col_widths=widths, wrap_cols=["Persona"],
             ))
             story.append(Spacer(1, 0.4 * cm))
             story.append(Paragraph(
@@ -562,7 +652,7 @@ class ReportGenerator:
 
             story.append(self._table(
                 sub,
-                col_widths=[2.2 * cm, 2.5 * cm, 3 * cm, 1.8 * cm, 7.5 * cm],
+                col_widths=[2.6 * cm, 2.4 * cm, 2.8 * cm, 1.7 * cm, 7.5 * cm],
                 wrap_cols=["recommendation", "JobRole", "Department"],
                 extra_styles=extra,
             ))
@@ -610,7 +700,7 @@ class ReportGenerator:
 
     def _conclusion(self):
         return [
-            PageBreak(),
+            Spacer(1, 0.6 * cm),
             Paragraph("7. Conclusion", self.styles["H1"]),
             self._section_divider(),
             Paragraph(
