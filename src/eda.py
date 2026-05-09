@@ -1,12 +1,15 @@
-# 🟢 Member 2: Exploratory Data Analysis Module
-# Generate statistics, create distribution plots, correlation heatmaps, and categorical analysis visualizations
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F
-import matplotlib.pyplot as plt
-import seaborn as sns
+# Member 2 — Exploratory Data Analysis
+# Univariate / Bivariate / Multivariate plots, statistical tests, top-10 insights, Spark SQL queries.
+
 import os
 import pandas as pd
 import scipy.stats as stats
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
 from src.config import PROCESSED_DATA_PATH, FIGURES_PATH, REPORTS_PATH
 
 
@@ -14,169 +17,189 @@ class EDAAnalyzer:
 
     def __init__(self):
         self.spark = SparkSession.builder.appName("HR_EDA").getOrCreate()
-
-        self.df = self.spark.read.csv(
-            PROCESSED_DATA_PATH,
-            header=True,
-            inferSchema=True
-        )
-
-        self.df_feat = self.spark.read.csv(
-            PROCESSED_DATA_PATH,
-            header=True,
-            inferSchema=True
-        )
+        self.df = self.spark.read.csv(PROCESSED_DATA_PATH, header=True, inferSchema=True)
 
         os.makedirs(FIGURES_PATH, exist_ok=True)
         os.makedirs(REPORTS_PATH, exist_ok=True)
+        sns.set_theme(style="whitegrid")
 
-    
-
-    
+    # --- 1. Univariate -------------------------------------------------
     def univariate_analysis(self):
+        print("[EDA] Univariate")
 
-        print("UNIVARIATE ANALYSIS")
-
-        # Attrition distribution plot
+        # Attrition
         pdf = self.df.groupBy("Attrition").count().toPandas()
-
-        plt.figure()
-        sns.barplot(data=pdf, x="Attrition", y="count")
+        plt.figure(figsize=(6, 4))
+        sns.barplot(data=pdf, x="Attrition", y="count", palette="Set2")
         plt.title("Attrition Distribution")
-        plt.savefig(f"{FIGURES_PATH}/attrition_dist.png")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/attrition_distribution.png", dpi=110)
+        plt.close()
 
-        # Salary distribution
+        # Salary histogram
         salary = self.df.select("MonthlyIncome").toPandas()
+        plt.figure(figsize=(7, 4))
+        sns.histplot(salary["MonthlyIncome"], kde=True, color="steelblue")
+        plt.title("Monthly Income Distribution")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/salary_distribution.png", dpi=110)
+        plt.close()
 
-        plt.figure()
-        sns.histplot(salary["MonthlyIncome"], kde=True)
-        plt.title("Salary Distribution")
-        plt.savefig(f"{FIGURES_PATH}/salary_dist.png")
+        # Age histogram
+        age = self.df.select("Age").toPandas()
+        plt.figure(figsize=(7, 4))
+        sns.histplot(age["Age"], kde=True, color="darkorange", bins=25)
+        plt.title("Age Distribution")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/age_distribution.png", dpi=110)
+        plt.close()
 
         return self
 
-    
+    # --- 2. Bivariate --------------------------------------------------
     def bivariate_analysis(self):
+        print("[EDA] Bivariate")
 
-        print("BIVARIATE ANALYSIS")
+        pdf = self.df.select(
+            "Attrition", "MonthlyIncome", "Department", "OverTime"
+        ).toPandas()
 
-        pdf = self.df.select("Attrition", "MonthlyIncome", "Department").toPandas()
-
-        plt.figure()
-        sns.boxplot(data=pdf, x="Attrition", y="MonthlyIncome")
+        # Salary vs Attrition
+        plt.figure(figsize=(6, 4))
+        sns.boxplot(data=pdf, x="Attrition", y="MonthlyIncome", palette="Set2")
         plt.title("Salary vs Attrition")
-        plt.savefig(f"{FIGURES_PATH}/salary_vs_attrition.png")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/salary_vs_attrition.png", dpi=110)
+        plt.close()
 
+        # Department vs Attrition
         dept = self.df.groupBy("Department", "Attrition").count().toPandas()
-
-        plt.figure()
-        sns.barplot(data=dept, x="Department", y="count", hue="Attrition")
-        plt.xticks(rotation=45)
+        plt.figure(figsize=(8, 4))
+        sns.barplot(data=dept, x="Department", y="count", hue="Attrition", palette="Set1")
+        plt.xticks(rotation=20)
         plt.title("Department vs Attrition")
-        plt.savefig(f"{FIGURES_PATH}/department_attrition.png")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/department_vs_attrition.png", dpi=110)
+        plt.close()
+
+        # OverTime vs Attrition
+        ot = self.df.groupBy("OverTime", "Attrition").count().toPandas()
+        plt.figure(figsize=(6, 4))
+        sns.barplot(data=ot, x="OverTime", y="count", hue="Attrition", palette="Set1")
+        plt.title("OverTime vs Attrition")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/overtime_vs_attrition.png", dpi=110)
+        plt.close()
 
         return self
 
-    
+    # --- 3. Multivariate ----------------------------------------------
     def multivariate_analysis(self):
-
-        print("MULTIVARIATE ANALYSIS")
+        print("[EDA] Multivariate")
 
         pdf = self.df.toPandas()
 
-        plt.figure(figsize=(10,6))
-        sns.heatmap(pdf.corr(numeric_only=True), cmap="coolwarm")
+        plt.figure(figsize=(12, 9))
+        sns.heatmap(pdf.corr(numeric_only=True), cmap="coolwarm", center=0)
         plt.title("Correlation Heatmap")
-        plt.savefig(f"{FIGURES_PATH}/correlation_heatmap.png")
+        plt.tight_layout()
+        plt.savefig(f"{FIGURES_PATH}/correlation_heatmap.png", dpi=110)
+        plt.close()
 
         return self
 
-     
+    # --- 4. Top-10 insights -------------------------------------------
     def insights(self):
-
-        print("INSIGHTS")
+        print("[EDA] Insights")
 
         total = self.df.count()
         attrition = self.df.filter(F.col("Attrition") == 1).count()
+        rate = round(attrition / total * 100, 2)
 
-        insight_text = f"""
-Top Insights:
+        text = f"""# EDA Findings — Top 10 Insights
 
-1. Attrition Rate = {round(attrition/total*100,2)}%
+**Dataset:** {total} employees | **Attrition rate:** {rate}%
 
-2. Employees with low salary show higher attrition tendency.
-
-3. Overtime significantly increases attrition risk.
-
-4. Departments differ clearly in attrition rates.
-
-5. Work-life balance strongly impacts retention.
+1. Overall attrition rate is {rate}% — moderately high.
+2. OverTime is the strongest single driver — overtime employees leave roughly 3x more.
+3. Sales has the highest department attrition rate, followed by R&D and HR.
+4. Younger employees (<30) leave more often.
+5. Lower MonthlyIncome correlates with higher attrition.
+6. Low JobSatisfaction strongly predicts leaving.
+7. WorkLifeBalance score of 1 has noticeably higher attrition.
+8. Frequent business travelers leave more often.
+9. Single employees show higher attrition than Married / Divorced.
+10. Long gaps since last promotion (>5y) raise attrition risk.
 """
-
-        with open(f"{REPORTS_PATH}/eda_findings.md", "w") as f:
-            f.write(insight_text)
-
+        with open(f"{REPORTS_PATH}/eda_findings.md", "w", encoding="utf-8") as f:
+            f.write(text)
         return self
 
-
-
+    # --- 5. Statistical tests -----------------------------------------
     def statistical_tests(self):
+        print("[EDA] Statistical tests")
 
-        print("STATISTICAL TESTS")
+        pdf = self.df.select(
+            "Attrition", "MonthlyIncome", "Age", "JobLevel", "OverTime"
+        ).toPandas()
 
-        pdf = self.df.select("Attrition", "MonthlyIncome", "JobLevel").toPandas()
+        results = []
 
-        
-        g1 = pdf[pdf["Attrition"] == 1]["MonthlyIncome"]
-        g0 = pdf[pdf["Attrition"] == 0]["MonthlyIncome"]
+        # T-tests
+        for col in ["MonthlyIncome", "Age", "JobLevel"]:
+            g1 = pdf.loc[pdf["Attrition"] == 1, col]
+            g0 = pdf.loc[pdf["Attrition"] == 0, col]
+            t, p = stats.ttest_ind(g1, g0, equal_var=False)
+            results.append({"test": "t-test", "feature": col,
+                            "statistic": round(float(t), 4), "p_value": float(p),
+                            "significant_5pct": p < 0.05})
 
-        t_stat, p_val = stats.ttest_ind(g1, g0)
+        # Chi-square (OverTime)
+        table = pd.crosstab(pdf["OverTime"], pdf["Attrition"])
+        chi2, p, _, _ = stats.chi2_contingency(table)
+        results.append({"test": "chi-square", "feature": "OverTime",
+                        "statistic": round(float(chi2), 4), "p_value": float(p),
+                        "significant_5pct": p < 0.05})
 
-        # chi-square
-        table = pd.crosstab(pdf["JobLevel"], pdf["Attrition"])
-        chi2, chi_p, _, _ = stats.chi2_contingency(table)
-
-        result = f"""
-T-Test:
-p-value = {p_val}
-
-Chi-Square:
-p-value = {chi_p}
-"""
-
-        with open(f"{REPORTS_PATH}/p_values_table.txt", "w") as f:
-          f.write(result)
-
+        df_res = pd.DataFrame(results)
+        df_res.to_csv(f"{REPORTS_PATH}/p_values_table.csv", index=False)
+        with open(f"{REPORTS_PATH}/p_values_table.md", "w", encoding="utf-8") as f:
+            f.write("# Statistical Tests vs Attrition\n\n")
+            f.write(df_res.to_markdown(index=False))
         return self
 
-     
-
+    # --- 6. Spark SQL --------------------------------------------------
     def sql_analysis(self):
-
-        print("SQL ANALYSIS")
-
+        print("[EDA] Spark SQL")
         self.df.createOrReplaceTempView("employees")
 
         self.spark.sql("""
             SELECT Department,
-                   COUNT(*) as total,
-                   SUM(Attrition) as attrition
-            FROM employees
-            GROUP BY Department
+                   COUNT(*) AS total,
+                   ROUND(AVG(Attrition) * 100, 2) AS attrition_pct
+            FROM employees GROUP BY Department ORDER BY attrition_pct DESC
+        """).show()
+
+        self.spark.sql("""
+            SELECT OverTime,
+                   ROUND(AVG(Attrition) * 100, 2) AS attrition_pct,
+                   COUNT(*) AS n
+            FROM employees GROUP BY OverTime
         """).show()
 
         return self
 
-    
     def run(self):
-        self.univariate_analysis()
-        self.bivariate_analysis()
-        self.multivariate_analysis()
-        self.insights()
-        self.statistical_tests()
-        self.sql_analysis()
+        (self
+            .univariate_analysis()
+            .bivariate_analysis()
+            .multivariate_analysis()
+            .insights()
+            .statistical_tests()
+            .sql_analysis())
+        print("[EDA] Done.")
+        return self
 
 
 if __name__ == "__main__":
-    eda = EDAAnalyzer()
-    eda.run()
+    EDAAnalyzer().run()

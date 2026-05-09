@@ -1,10 +1,10 @@
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from src.config import TARGET_ATTRITION, PROCESSED_DATA_PATH, FIGURES_PATH
+from src.config import TARGET_ATTRITION, PROCESSED_DATA_PATH, FEATURES_DATA_PATH
 
 CLEAN_PATH    = PROCESSED_DATA_PATH
-FEATURES_PATH = PROCESSED_DATA_PATH
+FEATURES_PATH = FEATURES_DATA_PATH
 
 
 

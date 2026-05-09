@@ -1,2 +1,17 @@
-# Project dependencies for data processing, ML models, and visualization
-# Install with: pip install -r requirements.txt
+# Data + ML
+pandas
+numpy
+scipy
+scikit-learn
+joblib
+pyspark
+
+# Plotting
+matplotlib
+seaborn
+
+# Markdown tables
+tabulate
+
+# PDF report
+reportlab
