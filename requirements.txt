@@ -12,6 +12,3 @@ seaborn
 
 # Markdown tables
 tabulate
-
-# PDF report
-reportlab
