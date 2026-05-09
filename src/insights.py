@@ -50,8 +50,13 @@ class InsightsGenerator:
         risk_path = f"{REPORTS_PATH}/risk_scores.csv"
         if os.path.exists(risk_path):
             risks = pd.read_csv(risk_path)
-            if "risk_score" not in base.columns:
-                base = base.merge(risks, on=ID_COL, how="left")
+            # Always merge risk_band (and risk_score if missing) — clustering only
+            # carries risk_score forward, not risk_band.
+            cols_to_add = [c for c in ["risk_score", "risk_band"]
+                           if c in risks.columns and c not in base.columns]
+            if cols_to_add:
+                base = base.merge(risks[[ID_COL] + cols_to_add],
+                                  on=ID_COL, how="left")
         else:
             base["risk_score"] = float("nan")
             base["risk_band"] = "Unknown"
