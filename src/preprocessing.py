@@ -55,7 +55,7 @@ class Preprocessor:
                         .first()[0]
                     )
                     self.df = self.df.fillna({col_name: mode_val})
-                    print(f"     → filled with mode: {mode_val}")
+                    print(f"      filled with mode: {mode_val}")
 
         print(" Missing values handled")
         return self
