@@ -4,7 +4,7 @@ from pyspark.sql.types import IntegerType
 from pyspark.ml.feature import StringIndexer, StandardScaler, VectorAssembler
 from pyspark.ml import Pipeline
 
-from config import (
+from src.config import (
     DATA_PATH, COLS_TO_DROP, CATEGORICAL_COLS,
     NUMERICAL_COLS, TARGET_ATTRITION, PROCESSED_DATA_PATH
 )

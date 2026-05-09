@@ -28,11 +28,8 @@ class EmployeeClustering:
         self.spark = spark or (
             SparkSession.builder
             .appName("EmployeeClustering")
-            .master("local[*]")
             .getOrCreate()
         )
-
-        self.spark.sparkContext.setLogLevel("ERROR")
 
         self.pdf = None
         self.cluster_df = None

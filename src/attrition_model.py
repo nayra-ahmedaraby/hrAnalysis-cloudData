@@ -34,9 +34,8 @@ class AttritionModel:
 
     def __init__(self, spark=None):
         self.spark = spark or (
-            SparkSession.builder.appName("AttritionModel").master("local[*]").getOrCreate()
+            SparkSession.builder.appName("AttritionModel").getOrCreate()
         )
-        self.spark.sparkContext.setLogLevel("ERROR")
 
         self.pdf = None
         self.X = None
@@ -148,7 +147,9 @@ class AttritionModel:
         top = (pd.Series(imp, index=self.feature_cols)
                .sort_values(ascending=False)
                .head(10))
-        top.to_csv(f"{REPORTS_PATH}/top_10_features.csv", header=["importance"])
+        top = top.round(4)
+        top.to_csv(f"{REPORTS_PATH}/top_10_features.csv",
+                   header=["importance"], index_label="feature")
         print("\nTop 10 features:\n", top)
         return self
 

@@ -18,7 +18,8 @@ import json
 import pandas as pd
 
 from src.config import (
-    FEATURES_DATA_PATH, PROCESSED_DATA_PATH, REPORTS_PATH, DASHBOARD_PATH,
+    DATA_PATH, FEATURES_DATA_PATH, PROCESSED_DATA_PATH,
+    REPORTS_PATH, DASHBOARD_PATH,
     ID_COL, TARGET_ATTRITION,
 )
 
@@ -47,6 +48,20 @@ class InsightsGenerator:
         else:
             base = pd.read_csv(PROCESSED_DATA_PATH)
 
+        # Merge human-readable categorical names from the raw CSV
+        # (preprocessing label-encoded these columns; the report needs the names).
+        try:
+            raw = pd.read_csv(DATA_PATH)
+            raw_cols = ["Department", "JobRole", "OverTime", "MaritalStatus",
+                        "BusinessTravel", "Gender", "EducationField"]
+            keep = [c for c in raw_cols if c in raw.columns]
+            if ID_COL in raw.columns and keep:
+                base = base.drop(columns=[c for c in keep if c in base.columns],
+                                 errors="ignore")
+                base = base.merge(raw[[ID_COL] + keep], on=ID_COL, how="left")
+        except Exception as e:
+            print(f"[load] could not merge raw labels: {e}")
+
         risk_path = f"{REPORTS_PATH}/risk_scores.csv"
         if os.path.exists(risk_path):
             risks = pd.read_csv(risk_path)
@@ -62,7 +77,12 @@ class InsightsGenerator:
         top_path = f"{REPORTS_PATH}/top_10_features.csv"
         if os.path.exists(top_path):
             self.top_features = pd.read_csv(top_path)
-            self.top_features.columns = ["feature", "importance"]
+            # Handle both formats: "feature,importance" and unnamed-index legacy.
+            if "Unnamed: 0" in self.top_features.columns:
+                self.top_features.columns = ["feature", "importance"]
+            elif self.top_features.shape[1] == 2:
+                self.top_features.columns = ["feature", "importance"]
+            self.top_features["importance"] = self.top_features["importance"].round(4)
         else:
             self.top_features = pd.DataFrame(columns=["feature", "importance"])
 

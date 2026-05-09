@@ -38,10 +38,8 @@ class PerformanceModel:
         self.spark = spark or (
             SparkSession.builder
             .appName("PerformanceModel")
-            .master("local[*]")
             .getOrCreate()
         )
-        self.spark.sparkContext.setLogLevel("ERROR")
 
         self.pdf = None
         self.regression_results = {}
