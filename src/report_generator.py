@@ -16,24 +16,47 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle,
     PageBreak, KeepTogether,
 )
+from reportlab.platypus.flowables import HRFlowable
 
 from src.config import REPORTS_PATH, FIGURES_PATH, DOCS_PATH
 
 
 REPORT_PATH = f"{DOCS_PATH}/final_report.pdf"
 
-NAVY  = colors.HexColor("#1a3d6d")
-GREY  = colors.HexColor("#555555")
-LIGHT = colors.HexColor("#f3f5f9")
+NAVY    = colors.HexColor("#1a3d6d")
+NAVY2   = colors.HexColor("#2a5a9b")
+GREY    = colors.HexColor("#555555")
+LIGHT   = colors.HexColor("#f3f5f9")
+ACCENT  = colors.HexColor("#e07a5f")   # warm accent (used for cover bar + emphasis)
+RED     = colors.HexColor("#c0392b")   # high risk
+AMBER   = colors.HexColor("#e67e22")   # medium risk
+GREEN   = colors.HexColor("#27ae60")   # low risk
 
 
 def _page_footer(canvas, doc):
-    """Adds 'Page N — HR Analytics Report' to every page."""
+    """Footer with page number and a thin separator line."""
     canvas.saveState()
+    # thin separator line above footer
+    canvas.setStrokeColor(colors.HexColor("#cccccc"))
+    canvas.setLineWidth(0.5)
+    canvas.line(2 * cm, 1.5 * cm, A4[0] - 2 * cm, 1.5 * cm)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(GREY)
     canvas.drawString(2 * cm, 1 * cm, "HR Analytics — Final Report")
     canvas.drawRightString(A4[0] - 2 * cm, 1 * cm, f"Page {doc.page}")
+    canvas.restoreState()
+
+
+def _cover_canvas(canvas, doc):
+    """Special canvas for cover: full-width navy hero block at top + accent bar."""
+    canvas.saveState()
+    page_w, page_h = A4
+    # Full-width navy block from top down to ~12 cm
+    canvas.setFillColor(NAVY)
+    canvas.rect(0, page_h - 12 * cm, page_w, 12 * cm, fill=1, stroke=0)
+    # Accent bar at the bottom of the navy block
+    canvas.setFillColor(ACCENT)
+    canvas.rect(0, page_h - 12 * cm - 0.3 * cm, page_w, 0.3 * cm, fill=1, stroke=0)
     canvas.restoreState()
 
 
@@ -44,21 +67,26 @@ class ReportGenerator:
 
         ss = getSampleStyleSheet()
         self.styles = ss
+
         ss.add(ParagraphStyle(
-            name="CoverTitle", parent=ss["Title"], fontSize=26, leading=30,
-            textColor=NAVY, alignment=TA_CENTER, spaceAfter=10,
+            name="CoverTitle", parent=ss["Title"], fontSize=32, leading=38,
+            textColor=colors.whitesmoke, alignment=TA_CENTER, spaceAfter=10,
         ))
         ss.add(ParagraphStyle(
-            name="CoverSub", parent=ss["BodyText"], fontSize=13,
-            textColor=GREY, alignment=TA_CENTER, spaceAfter=20,
+            name="CoverSub", parent=ss["BodyText"], fontSize=14,
+            textColor=colors.whitesmoke, alignment=TA_CENTER, spaceAfter=20,
         ))
         ss.add(ParagraphStyle(
-            name="H1", parent=ss["Heading1"], fontSize=16, leading=20,
-            textColor=NAVY, spaceBefore=10, spaceAfter=8,
+            name="CoverMeta", parent=ss["BodyText"], fontSize=11,
+            textColor=GREY, alignment=TA_CENTER, leading=16,
+        ))
+        ss.add(ParagraphStyle(
+            name="H1", parent=ss["Heading1"], fontSize=18, leading=22,
+            textColor=NAVY, spaceBefore=12, spaceAfter=4,
         ))
         ss.add(ParagraphStyle(
             name="H2", parent=ss["Heading2"], fontSize=12, leading=16,
-            textColor=NAVY, spaceBefore=6, spaceAfter=4,
+            textColor=NAVY2, spaceBefore=8, spaceAfter=4,
         ))
         ss.add(ParagraphStyle(
             name="Body2", parent=ss["BodyText"], fontSize=10, leading=14,
@@ -71,9 +99,20 @@ class ReportGenerator:
             name="CellBold", parent=ss["BodyText"], fontSize=8, leading=10,
             fontName="Helvetica-Bold", textColor=colors.whitesmoke,
         ))
+        ss.add(ParagraphStyle(
+            name="KpiLabel", parent=ss["BodyText"], fontSize=9,
+            textColor=GREY, alignment=TA_CENTER,
+        ))
+        ss.add(ParagraphStyle(
+            name="KpiValue", parent=ss["BodyText"], fontSize=18,
+            textColor=NAVY, alignment=TA_CENTER, fontName="Helvetica-Bold",
+            leading=22,
+        ))
+        ss.add(ParagraphStyle(
+            name="TocItem", parent=ss["BodyText"], fontSize=11, leading=18,
+            textColor=NAVY,
+        ))
 
-    # ------------------------------------------------------------------
-    # Helpers
     # ------------------------------------------------------------------
     def _read_summary(self):
         path = f"{REPORTS_PATH}/executive_summary.json"
@@ -92,15 +131,17 @@ class ReportGenerator:
             df[c] = df[c].round(ndigits)
         return df
 
-    def _table(self, df, col_widths=None, wrap_cols=None):
-        """Build a styled Table. wrap_cols = list of column names to wrap as Paragraph."""
+    def _section_divider(self):
+        return HRFlowable(
+            width="100%", thickness=1.2, color=NAVY,
+            spaceBefore=2, spaceAfter=8,
+        )
+
+    def _table(self, df, col_widths=None, wrap_cols=None, extra_styles=None):
         df = df.copy()
         wrap_cols = set(wrap_cols or [])
 
-        # Build header row
         header = [Paragraph(str(c), self.styles["CellBold"]) for c in df.columns]
-
-        # Build body rows
         body = []
         for _, row in df.iterrows():
             cells = []
@@ -108,26 +149,26 @@ class ReportGenerator:
                 val = row[c]
                 if pd.isna(val):
                     val = ""
-                if c in wrap_cols:
-                    cells.append(Paragraph(str(val), self.styles["Cell"]))
-                else:
-                    cells.append(Paragraph(str(val), self.styles["Cell"]))
+                cells.append(Paragraph(str(val), self.styles["Cell"]))
             body.append(cells)
 
         t = Table([header] + body, colWidths=col_widths, repeatRows=1)
-        t.setStyle(TableStyle([
+        style = [
             ("BACKGROUND", (0, 0), (-1, 0), NAVY),
             ("TEXTCOLOR",  (0, 0), (-1, 0), colors.whitesmoke),
             ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE",   (0, 0), (-1, -1), 8),
-            ("GRID",       (0, 0), (-1, -1), 0.25, colors.HexColor("#999999")),
+            ("GRID",       (0, 0), (-1, -1), 0.25, colors.HexColor("#bbbbbb")),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, LIGHT]),
             ("VALIGN",     (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING",  (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),
             ("TOPPADDING",   (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING",(0, 0), (-1, -1), 3),
-        ]))
+        ]
+        if extra_styles:
+            style.extend(extra_styles)
+        t.setStyle(TableStyle(style))
         return t
 
     def _image(self, name, width=11 * cm):
@@ -141,58 +182,127 @@ class ReportGenerator:
     # ------------------------------------------------------------------
     def _cover(self):
         story = []
-        story.append(Spacer(1, 6 * cm))
+        # Inside the navy hero block — vertical position controlled by spacers
+        story.append(Spacer(1, 4 * cm))
         story.append(Paragraph("HR Analytics", self.styles["CoverTitle"]))
         story.append(Paragraph("Final Report", self.styles["CoverTitle"]))
-        story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.6 * cm))
         story.append(Paragraph(
             "Predictive Workforce Insights &amp; Strategic Recommendations",
             self.styles["CoverSub"],
         ))
-        story.append(Spacer(1, 4 * cm))
+        # Push past the navy block (~12cm) plus accent bar
+        story.append(Spacer(1, 6 * cm))
         story.append(Paragraph(
-            f"<b>Generated:</b> {datetime.now().strftime('%Y-%m-%d')}",
-            ParagraphStyle(name="cd", fontSize=10, alignment=TA_CENTER, textColor=GREY),
+            f"<b>Generated</b><br/>{datetime.now().strftime('%B %d, %Y')}",
+            self.styles["CoverMeta"],
         ))
+        story.append(Spacer(1, 0.4 * cm))
         story.append(Paragraph(
-            "<b>Dataset:</b> IBM HR Employee Attrition (1,470 employees)",
-            ParagraphStyle(name="cs", fontSize=10, alignment=TA_CENTER, textColor=GREY),
+            "<b>Dataset</b><br/>IBM HR Employee Attrition · 1,470 employees",
+            self.styles["CoverMeta"],
+        ))
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(Paragraph(
+            "<b>Pipeline</b><br/>PySpark · scikit-learn · K-Means · Power BI",
+            self.styles["CoverMeta"],
         ))
         story.append(PageBreak())
         return story
 
-    def _executive_summary(self, summary):
-        story = [Paragraph("1. Executive Summary", self.styles["H1"])]
+    def _toc(self):
+        items = [
+            ("1.", "Executive Summary",        "3"),
+            ("2.", "Methodology",              "4"),
+            ("3.", "EDA Highlights",           "5"),
+            ("4.", "Modelling Results",        "7"),
+            ("5.", "Workforce Segmentation",   "8"),
+            ("6.", "Strategic Recommendations","9"),
+            ("7.", "Conclusion",               "10"),
+        ]
+        rows = [[
+            Paragraph(f"<b>{num}</b>", self.styles["TocItem"]),
+            Paragraph(title, self.styles["TocItem"]),
+            Paragraph(page, self.styles["TocItem"]),
+        ] for num, title, page in items]
 
-        if summary:
-            labels = {
-                "total_employees":      "Total Employees",
-                "attrition_rate":       "Attrition Rate (%)",
-                "avg_risk":             "Average Risk Score",
-                "high_risk_count":      "High-Risk Count (>0.6)",
-                "avg_monthly_income":   "Avg Monthly Income (USD)",
-                "avg_age":              "Average Age",
-                "avg_tenure_years":     "Average Tenure (years)",
-            }
-            rows = [["Metric", "Value"]]
-            for k, label in labels.items():
-                if k in summary and summary[k] is not None:
-                    rows.append([label, str(summary[k])])
-            t = Table(rows, colWidths=[8 * cm, 5 * cm])
-            t.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), NAVY),
-                ("TEXTCOLOR",  (0, 0), (-1, 0), colors.whitesmoke),
-                ("FONTNAME",   (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE",   (0, 0), (-1, -1), 10),
-                ("GRID",       (0, 0), (-1, -1), 0.25, colors.HexColor("#999999")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, LIGHT]),
-                ("VALIGN",     (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING",  (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING",   (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING",(0, 0), (-1, -1), 5),
-            ]))
-            story.append(t)
+        t = Table(rows, colWidths=[1 * cm, 12 * cm, 2 * cm])
+        t.setStyle(TableStyle([
+            ("LINEBELOW", (0, 0), (-1, -1), 0.4, colors.HexColor("#dddddd")),
+            ("VALIGN",    (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",(0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+            ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+        ]))
+
+        return [
+            Paragraph("Table of Contents", self.styles["H1"]),
+            self._section_divider(),
+            Spacer(1, 0.4 * cm),
+            t,
+            PageBreak(),
+        ]
+
+    def _kpi_grid(self, summary):
+        """Render KPIs as a 2-row x 4-col grid of large-value cards."""
+        order = [
+            ("total_employees",     "Total Employees",   "{}"),
+            ("attrition_rate",      "Attrition Rate",    "{}%"),
+            ("avg_risk",            "Avg Risk Score",    "{}"),
+            ("high_risk_count",     "High-Risk (>0.6)",  "{}"),
+            ("avg_monthly_income",  "Avg Income (USD)",  "{}"),
+            ("avg_age",             "Avg Age",           "{}"),
+            ("avg_tenure_years",    "Avg Tenure (yrs)",  "{}"),
+        ]
+        cards = []
+        for key, label, fmt in order:
+            v = summary.get(key)
+            if v is None:
+                continue
+            cards.append((label, fmt.format(v)))
+
+        if not cards:
+            return None
+
+        # arrange 4 per row
+        rows = []
+        per_row = 4
+        for i in range(0, len(cards), per_row):
+            chunk = cards[i:i + per_row]
+            label_row = [Paragraph(lbl, self.styles["KpiLabel"]) for lbl, _ in chunk]
+            value_row = [Paragraph(val, self.styles["KpiValue"]) for _, val in chunk]
+            # pad to per_row
+            while len(label_row) < per_row:
+                label_row.append("")
+                value_row.append("")
+            rows.append(value_row)
+            rows.append(label_row)
+
+        col_widths = [(17 / per_row) * cm] * per_row
+        t = Table(rows, colWidths=col_widths)
+        # alternate row backgrounds: value rows = LIGHT, label rows = white
+        styles = [
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]
+        # Highlight value rows
+        for r_idx in range(0, len(rows), 2):
+            styles.append(("BACKGROUND", (0, r_idx), (-1, r_idx), LIGHT))
+        t.setStyle(TableStyle(styles))
+        return t
+
+    def _executive_summary(self, summary):
+        story = [
+            Paragraph("1. Executive Summary", self.styles["H1"]),
+            self._section_divider(),
+        ]
+
+        kpi = self._kpi_grid(summary)
+        if kpi is not None:
+            story.append(kpi)
             story.append(Spacer(1, 0.4 * cm))
 
         story.append(Paragraph(
@@ -205,8 +315,7 @@ class ReportGenerator:
             self.styles["Body2"],
         ))
 
-        # Key findings bullet list
-        story.append(Paragraph("<b>Key findings</b>", self.styles["H2"]))
+        story.append(Paragraph("Key findings", self.styles["H2"]))
         bullets = [
             "Overall attrition rate is around 16%, concentrated in Sales and R&amp;D.",
             "OverTime is the single strongest predictor — overtime workers leave roughly 3x more often.",
@@ -215,12 +324,19 @@ class ReportGenerator:
             "Three clear personas emerge: Loyal Long-Term, Average Workforce, and High Attrition Risk.",
         ]
         for b in bullets:
-            story.append(Paragraph(f"• {b}", self.styles["Body2"]))
+            story.append(Paragraph(
+                f'<font color="#e07a5f">▸</font>&nbsp;&nbsp;{b}',
+                self.styles["Body2"],
+            ))
 
         return story
 
     def _methodology(self):
-        story = [PageBreak(), Paragraph("2. Methodology", self.styles["H1"])]
+        story = [
+            PageBreak(),
+            Paragraph("2. Methodology", self.styles["H1"]),
+            self._section_divider(),
+        ]
 
         story.append(Paragraph("2.1 Data preparation", self.styles["H2"]))
         story.append(Paragraph(
@@ -277,9 +393,12 @@ class ReportGenerator:
         return story
 
     def _eda(self):
-        story = [PageBreak(), Paragraph("3. EDA Highlights", self.styles["H1"])]
+        story = [
+            PageBreak(),
+            Paragraph("3. EDA Highlights", self.styles["H1"]),
+            self._section_divider(),
+        ]
 
-        # 3.1 Top 10 insights (qualitative findings from the data)
         story.append(Paragraph("3.1 Top 10 insights", self.styles["H2"]))
         insights = [
             "Overall attrition rate is around 16% — moderately high vs the typical 10% benchmark.",
@@ -294,10 +413,12 @@ class ReportGenerator:
             "Long gaps since last promotion (more than 5 years) raise attrition risk.",
         ]
         for i, ins in enumerate(insights, 1):
-            story.append(Paragraph(f"{i}. {ins}", self.styles["Body2"]))
-        story.append(Spacer(1, 0.4 * cm))
+            story.append(Paragraph(
+                f'<font color="#1a3d6d"><b>{i:>2}.</b></font>&nbsp;&nbsp;{ins}',
+                self.styles["Body2"],
+            ))
+        story.append(Spacer(1, 0.3 * cm))
 
-        # 3.2 Visual highlights
         story.append(Paragraph("3.2 Visual highlights", self.styles["H2"]))
         for name, caption in [
             ("attrition_distribution.png",
@@ -317,9 +438,12 @@ class ReportGenerator:
         return story
 
     def _modelling(self):
-        story = [PageBreak(), Paragraph("4. Modelling Results", self.styles["H1"])]
+        story = [
+            PageBreak(),
+            Paragraph("4. Modelling Results", self.styles["H1"]),
+            self._section_divider(),
+        ]
 
-        # 4.1 Attrition models
         story.append(Paragraph("4.1 Attrition model comparison", self.styles["H2"]))
         cmp = self._read_csv("attrition_models_comparison.csv")
         if not cmp.empty:
@@ -327,22 +451,18 @@ class ReportGenerator:
             story.append(self._table(cmp))
         story.append(Spacer(1, 0.4 * cm))
 
-        # 4.2 Top 10 drivers
         story.append(Paragraph("4.2 Top 10 attrition drivers", self.styles["H2"]))
         top = self._read_csv("top_10_features.csv")
         if not top.empty:
-            # Normalize header
             if "Unnamed: 0" in top.columns:
                 top.columns = ["feature", "importance"]
-            elif top.shape[1] == 2 and top.columns[0].startswith("feature") is False \
-                    and "feature" not in top.columns:
+            elif top.shape[1] == 2 and "feature" not in top.columns:
                 top.columns = ["feature", "importance"]
             if "importance" in top.columns:
                 top["importance"] = top["importance"].astype(float).round(4)
             story.append(self._table(top, col_widths=[7 * cm, 4 * cm]))
         story.append(Spacer(1, 0.4 * cm))
 
-        # 4.3 Performance models
         story.append(Paragraph("4.3 Performance models", self.styles["H2"]))
         reg = self._read_csv("performance_regression_comparison.csv")
         if not reg.empty:
@@ -360,19 +480,20 @@ class ReportGenerator:
         return story
 
     def _segmentation(self):
-        story = [PageBreak(), Paragraph("5. Workforce Segmentation", self.styles["H1"])]
+        story = [
+            PageBreak(),
+            Paragraph("5. Workforce Segmentation", self.styles["H1"]),
+            self._section_divider(),
+        ]
         personas = self._read_csv("personas.csv")
         if not personas.empty:
             personas = self._round_numeric(personas, 3)
-
-            # Reorder so Persona is right after Cluster if present
             cols = personas.columns.tolist()
             if "Persona" in cols:
                 ordered = ["Cluster", "Persona"] + [c for c in cols
                                                     if c not in ("Cluster", "Persona")]
                 personas = personas[[c for c in ordered if c in cols]]
 
-            # Shorten long numeric column names so the table fits the page
             rename_map = {
                 "EngagementScore":   "Engage",
                 "TenureRatio":       "Tenure",
@@ -383,7 +504,6 @@ class ReportGenerator:
             }
             personas = personas.rename(columns=rename_map)
 
-            # Explicit widths so headers and Persona text don't wrap mid-word
             widths = []
             for c in personas.columns:
                 if c == "Cluster":
@@ -408,9 +528,13 @@ class ReportGenerator:
         return story
 
     def _recommendations(self):
-        story = [PageBreak(), Paragraph("6. Strategic Recommendations", self.styles["H1"])]
+        story = [
+            PageBreak(),
+            Paragraph("6. Strategic Recommendations", self.styles["H1"]),
+            self._section_divider(),
+        ]
 
-        # 6.1 Top 20
+        # 6.1 Top 20 — color the risk_score column based on band
         story.append(Paragraph("6.1 Top 20 high-risk employees", self.styles["H2"]))
         top20 = self._read_csv("top20_high_risk.csv")
         if not top20.empty:
@@ -419,26 +543,60 @@ class ReportGenerator:
             sub = top20[cols].copy()
             if "risk_score" in sub.columns:
                 sub["risk_score"] = sub["risk_score"].round(3)
-            # Word-wrap the recommendation column
+
+            # Build extra styles to color the risk_score cell
+            extra = []
+            if "risk_score" in sub.columns:
+                rs_idx = sub.columns.get_loc("risk_score")
+                for i, val in enumerate(sub["risk_score"].tolist(), start=1):
+                    if val >= 0.6:
+                        bg, fg = RED, colors.whitesmoke
+                    elif val >= 0.3:
+                        bg, fg = AMBER, colors.whitesmoke
+                    else:
+                        bg, fg = GREEN, colors.whitesmoke
+                    extra.append(("BACKGROUND", (rs_idx, i), (rs_idx, i), bg))
+                    extra.append(("TEXTCOLOR",  (rs_idx, i), (rs_idx, i), fg))
+                    extra.append(("FONTNAME",   (rs_idx, i), (rs_idx, i), "Helvetica-Bold"))
+                    extra.append(("ALIGN",      (rs_idx, i), (rs_idx, i), "CENTER"))
+
             story.append(self._table(
                 sub,
                 col_widths=[2.2 * cm, 2.5 * cm, 3 * cm, 1.8 * cm, 7.5 * cm],
                 wrap_cols=["recommendation", "JobRole", "Department"],
+                extra_styles=extra,
             ))
         story.append(Spacer(1, 0.4 * cm))
 
-        # 6.2 Persona strategies
+        # 6.2 Persona strategies — color Priority cells
         story.append(Paragraph("6.2 Persona strategies", self.styles["H2"]))
         ps = self._read_csv("persona_strategies.csv")
         if not ps.empty:
+            extra = []
+            if "Priority" in ps.columns:
+                pri_idx = ps.columns.get_loc("Priority")
+                for i, p in enumerate(ps["Priority"].tolist(), start=1):
+                    s = str(p).lower()
+                    if "critical" in s:
+                        bg = RED
+                    elif "high" in s:
+                        bg = AMBER
+                    elif "medium" in s:
+                        bg = colors.HexColor("#f1c40f")
+                    else:
+                        bg = GREEN
+                    extra.append(("BACKGROUND", (pri_idx, i), (pri_idx, i), bg))
+                    extra.append(("TEXTCOLOR",  (pri_idx, i), (pri_idx, i), colors.whitesmoke))
+                    extra.append(("FONTNAME",   (pri_idx, i), (pri_idx, i), "Helvetica-Bold"))
+                    extra.append(("ALIGN",      (pri_idx, i), (pri_idx, i), "CENTER"))
             story.append(self._table(
                 ps,
                 col_widths=[1.5 * cm, 4 * cm, 2 * cm, 9.5 * cm],
                 wrap_cols=["Strategy", "Persona"],
+                extra_styles=extra,
             ))
         story.append(Spacer(1, 0.4 * cm))
 
-        # 6.3 Department recommendations
         story.append(Paragraph("6.3 Department-level recommendations", self.styles["H2"]))
         dr = self._read_csv("department_recommendations.csv")
         if not dr.empty:
@@ -452,8 +610,9 @@ class ReportGenerator:
 
     def _conclusion(self):
         return [
-            Spacer(1, 0.6 * cm),
+            PageBreak(),
             Paragraph("7. Conclusion", self.styles["H1"]),
+            self._section_divider(),
             Paragraph(
                 "The combined predictive model and clustering analysis allow HR "
                 "to direct retention investment where it has the highest expected "
@@ -487,6 +646,7 @@ class ReportGenerator:
 
         story = []
         story += self._cover()
+        story += self._toc()
         story += self._executive_summary(summary)
         story += self._methodology()
         story += self._eda()
@@ -495,7 +655,8 @@ class ReportGenerator:
         story += self._recommendations()
         story += self._conclusion()
 
-        doc.build(story, onFirstPage=_page_footer, onLaterPages=_page_footer)
+        # Cover gets the navy hero canvas; later pages get the standard footer.
+        doc.build(story, onFirstPage=_cover_canvas, onLaterPages=_page_footer)
         print(f"[saved] PDF report → {REPORT_PATH}")
 
 
