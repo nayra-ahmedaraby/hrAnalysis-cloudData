@@ -19,13 +19,13 @@ this is the tree of the project:
 │   ├── __init__.py
 │   ├── config.py                    # paths, constants, column names
 │   │
-│   ├── preprocessing.py             # 🔵 Member 1: class Preprocessor
-│   ├── eda.py                       # 🟢 Member 2: class EDAAnalyzer
-│   ├── features.py                  # 🟡 Member 3: class FeatureEngineer
-│   ├── attrition_model.py           # 🟡 Member 3: class AttritionModel
-│   ├── performance_model.py         # 🟠 Member 4: class PerformanceModel
-│   ├── clustering.py                # 🟠 Member 4: class EmployeeClustering
-│   └── insights.py                  # 🔴 Member 5: class InsightsGenerator
+│   ├── preprocessing.py             
+│   ├── eda.py                       
+│   ├── features.py                  
+│   ├── attrition_model.py         
+│   ├── performance_model.py        
+│   ├── clustering.py                
+│   └── insights.py                  
 │
 ├── outputs/
 │   ├── figures/                     # EDA plots
