@@ -125,17 +125,40 @@ class Preprocessor:
         return self
 
     def process_with_rdd(self):
-        """Spark Paradigm 3: RDD-style processing (بدون mapInPandas لتجنب schema error)"""
-        print("\nParadigm 3: RDD-style Processing")
+        """Spark Paradigm 3: RDD API (low-level distributed operations)."""
+        print("\nParadigm 3: RDD API")
 
-        total = self.df.count()
-        attrition_count = self.df.filter(F.col("Attrition") == 1).count()
-        attrition_rate = round(attrition_count / total * 100, 2)
+        # Drop down to the underlying RDD and use .map() / .filter() / .reduce()
+        # — these are the original low-level Spark operations.
+        try:
+            rdd = self.df.rdd
 
-        print(f" RDD-style Processing:")
-        print(f"   Total Employees : {total}")
-        print(f"   Attrition Count : {attrition_count}")
-        print(f"   Attrition Rate  : {attrition_rate}%")
+            total = rdd.count()
+            attrition_count = rdd.filter(lambda row: row["Attrition"] == 1).count()
+
+            # map each row to its MonthlyIncome and reduce to compute mean
+            total_income = rdd.map(lambda row: row["MonthlyIncome"]).reduce(lambda a, b: a + b)
+            avg_income = total_income / total
+
+            attrition_rate = round(attrition_count / total * 100, 2)
+
+            print(f" RDD API Processing:")
+            print(f"   Total Employees : {total}")
+            print(f"   Attrition Count : {attrition_count}  (via rdd.filter)")
+            print(f"   Attrition Rate  : {attrition_rate}%")
+            print(f"   Avg Income      : {round(avg_income, 2)}  (via rdd.map + reduce)")
+
+        except Exception as e:
+            # Databricks serverless blocks direct RDD access; fall back to a
+            # DataFrame equivalent so the pipeline still runs end-to-end.
+            print(f" RDD API not available on this cluster ({type(e).__name__}); "
+                  f"using equivalent DataFrame ops.")
+            total = self.df.count()
+            attrition_count = self.df.filter(F.col("Attrition") == 1).count()
+            attrition_rate = round(attrition_count / total * 100, 2)
+            print(f"   Total Employees : {total}")
+            print(f"   Attrition Count : {attrition_count}")
+            print(f"   Attrition Rate  : {attrition_rate}%")
 
         return self
 
