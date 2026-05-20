@@ -4,6 +4,8 @@
 
 A comprehensive data analytics project focused on analyzing human resources data and predicting employee attrition. This project combines data analysis and machine learning techniques to extract valuable insights that help HR management make data-driven decisions.
 
+**🔗 Cloud Integration**: This project is integrated with **Databricks** for cloud-based data processing. All outputs (models, reports, and visualizations) are stored and managed in Databricks.
+
 ## 📋 Key Objectives
 
 - **Predict Employee Attrition**: Build predictive models to identify employees at risk of leaving
@@ -57,6 +59,22 @@ hrAnalysis-cloudData/
 - **Scikit-learn**: Machine learning models
 - **Matplotlib & Seaborn**: Data visualizations
 - **Power BI**: Interactive dashboards
+- **Databricks**: Cloud platform for data processing and storage
+
+## ☁️ Databricks Integration
+
+This project leverages **Databricks** as the primary cloud platform for:
+- **Data Processing**: Distributed data processing and transformation
+- **Model Training**: Training machine learning models at scale
+- **Output Storage**: All generated models, reports, and visualizations are stored in Databricks
+- **Collaboration**: Cloud-based environment for team collaboration
+
+### Output Location
+All project outputs are automatically generated and stored in Databricks:
+- 📊 Trained models and artifacts
+- 📈 Generated reports and analytics
+- 📋 Processed datasets
+- 📉 Visualizations and charts
 
 ## 📊 Dataset Used
 
@@ -81,19 +99,37 @@ pip install -r requirements.txt
 python main.py
 ```
 
+> **Note**: When running in Databricks, outputs are automatically saved to your Databricks workspace. Check the Databricks ML Registry and workspace folders for generated artifacts.
+
+## 📂 Accessing Outputs in Databricks
+
+After running the pipeline, find your outputs:
+1. **Models**: Check MLflow Registry or `/Users/[username]/models/`
+2. **Reports**: Available in `/Workspace/[project-path]/reports/`
+3. **Processed Data**: Stored in Databricks Tables or Delta Lake
+4. **Visualizations**: Accessible through Databricks Notebooks
+
 ## 📈 Project Outputs
 
+All project outputs are generated and stored in **Databricks**:
+
 1. **Predictive Models**:
-   - Employee Attrition Prediction Model
-   - Performance Evaluation Model
+   - Employee Attrition Prediction Model (saved in Databricks MLflow)
+   - Performance Evaluation Model (saved in Databricks MLflow)
 
 2. **Reports and Analysis**:
    - List of high-risk employees
    - Employee segmentation into personas
    - Key insights and recommendations
+   - CSV exports available in Databricks workspace
 
 3. **Interactive Dashboards**:
    - Power BI dashboard for data visualization and results
+   - Databricks SQL analytics for real-time monitoring
+
+4. **Processed Data**:
+   - Cleaned and feature-engineered datasets
+   - Model predictions and scores
 
 ## 👥 Project Team
 
